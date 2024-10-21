@@ -1,14 +1,14 @@
 const sql = require('mssql');
 
-// Configura los detalles de tu conexión
+
 const config = {
-    user: 'jony',  // Usuario de SQL Server
-    password: '123',  // Contraseña del usuario
-    server: '192.168.0.2',  // Dirección IP o nombre del servidor
-    database: 'PERSONAS',  // Nombre de la base de datos
+    user: 'jony',  
+    password: '123',  
+    server: '192.168.0.2',  
+    database: 'PERSONAS',  
     options: {
-        encrypt: false,  // Dependiendo de la configuración de tu servidor
-        enableArithAbort: true  // Configuración recomendada por mssql para SQL Server
+        encrypt: false,  
+        enableArithAbort: true 
     }
 };
 
