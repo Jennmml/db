@@ -4,8 +4,8 @@ const sql = require('mssql');
 const config = {
     user: 'jony',  
     password: '123',  
-    server: '192.168.0.2',  
-    database: 'PERSONAS',  
+    server: 'JONATHAN//SQLEXPRESS',  
+    database: 'BD',  
     options: {
         encrypt: false,  
         enableArithAbort: true 

@@ -1,98 +1,82 @@
 import { useState } from 'react';
-import './App.css';
-import Operation from './components/operationComponent';
+import Dashboard from './components/Dashboard';
 import CudComponent from './components/CudComponent';
 import ReadComponent from './components/ReadComponent';
 
-function App() {
-  const [clickedButton, setClickedButton] = useState('');
+export default function App() {
+  const [activeOperation, setActiveOperation] = useState('dashboard');
   const [usersData, setUsersData] = useState([]);
-  const [operationDone, setOperationDone] = useState('');
+  const [selectedType, setSelectedType] = useState(''); // Estado para la opción seleccionada
 
-  const handleClick = (button) => {
-    setClickedButton(button);
-  };
+  const handleTypeChange = async (e) => {
+    const type = e.target.value;
+    setSelectedType(type);
 
-  const handleUserData = async () => {
-    try {
-      const response = await fetch('http://localhost:3000/api/personas');
-      const data = await response.json();
-      setUsersData(data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+    if (type) {
+      try {
+        const response = await fetch(`http://localhost:3000/api/${type}`);
+        const result = await response.json();
+        setUsersData(result);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
     }
   };
 
-  // Función para crear (POST)
-  const handleCreate = async (name, age) => {
-    try {
-      const response = await fetch('http://localhost:3000/api/insertar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, age }),  // Enviar datos como JSON
-      });
-      const result = await response.text();
-      console.log(result);
-      setOperationDone('Create');
-      handleUserData(); // Actualizar datos después de la creación
-    } catch (error) {
-      console.error('Error creating user:', error);
-    }
+  const handleCreate = (name, age) => {
+    const newUser = { id: usersData.length + 1, name, age: parseInt(age) };
+    setUsersData([...usersData, newUser]);
+    return true;
   };
 
-  // Función para actualizar (PUT)
-  const handleUpdate = async (id, age) => {
-    try {
-      const response = await fetch('http://localhost:3000/api/actualizar', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id, age }),  // Enviar id y age como JSON
-      });
-      const result = await response.text();
-      console.log(result);
-      setOperationDone('Update');
-      handleUserData(); // Actualizar datos después de la actualización
-    } catch (error) {
-      console.error('Error updating user:', error);
-    }
+  const handleUpdate = (id, age) => {
+    const updatedUsers = usersData.map((user) =>
+      user.id === parseInt(id) ? { ...user, age: parseInt(age) } : user
+    );
+    setUsersData(updatedUsers);
+    return true;
   };
 
-  // Función para borrar (DELETE)
-  const handleDelete = async (id) => {
-    try {
-      const response = await fetch(`http://localhost:3000/api/borrar?id=${id}`, {
-        method: 'DELETE',
-      });
-      const result = await response.text();
-      console.log(result);
-      setOperationDone('Delete');
-      handleUserData(); // Actualizar datos después de la eliminación
-    } catch (error) {
-      console.error('Error deleting user:', error);
-    }
+  const handleDelete = (id) => {
+    const filteredUsers = usersData.filter((user) => user.id !== parseInt(id));
+    setUsersData(filteredUsers);
+    return true;
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen text-center p-10">
-      <nav className="flex gap-4 bg-gray-800 p-4 rounded shadow-lg">
-        <Operation operationName="Create" selectedButton={() => handleClick('Create')} />
-        <Operation operationName="Read" selectedButton={() => handleClick('Read')} additionalAction={handleUserData} />
-        <Operation operationName="Update" selectedButton={() => handleClick('Update')} />
-        <Operation operationName="Delete" selectedButton={() => handleClick('Delete')} />
-      </nav>
+    <div className="flex h-screen w-screen bg-gray-100">
+      <aside className="w-64 bg-white shadow-md p-4">
+        <h2 className="text-2xl font-bold text-gray-800">CRUD App</h2>
+        <nav className="mt-6 space-y-2">
+          {['dashboard', 'create', 'read', 'update', 'delete'].map((operation) => (
+            <button
+              key={operation}
+              className={`w-full text-left px-4 py-2 rounded ${
+                activeOperation === operation
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
+              onClick={() => setActiveOperation(operation)}
+            >
+              {operation.charAt(0).toUpperCase() + operation.slice(1)}
+            </button>
+          ))}
+        </nav>
+      </aside>
 
-      <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md mt-8">
-        {clickedButton === 'Create' && <CudComponent operation="Create" handleAction={handleCreate} />}
-        {clickedButton === 'Update' && <CudComponent operation="Update" handleAction={handleUpdate} />}
-        {clickedButton === 'Delete' && <CudComponent operation="Delete" handleAction={handleDelete} />}
-        {clickedButton === 'Read' && <ReadComponent data={usersData} />}
-      </div>
+      <main className="flex-1 p-8">
+        {activeOperation === 'dashboard' && <Dashboard usersData={usersData} />}
+        {activeOperation === 'create' && <CudComponent operation="Create" handleAction={handleCreate} />}
+        {activeOperation === 'read' && (
+          <ReadComponent
+            data={usersData}
+            selectedType={selectedType}
+            handleTypeChange={handleTypeChange}
+          />
+        )}
+        {activeOperation === 'update' && <CudComponent operation="Update" handleAction={handleUpdate} />}
+        {activeOperation === 'delete' && <CudComponent operation="Delete" handleAction={handleDelete} />}
+      </main>
     </div>
   );
 }
-
-export default App;
