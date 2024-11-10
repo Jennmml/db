@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import DeleteComponent from './components/DeleteComponent';
 import ReadComponent from './components/ReadComponent';
@@ -8,7 +8,28 @@ import UpdateComponent from './components/UpdateComponent';
 export default function App() {
   const [activeOperation, setActiveOperation] = useState('dashboard');
   const [usersData, setUsersData] = useState([]);
-  const [selectedType, setSelectedType] = useState(''); // Estado para la opción seleccionada
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [selectedType, setSelectedType] = useState('');
+
+  // Función para cargar el total de usuarios
+  const loadTotalUsers = async () => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/personas`);
+      const result = await response.json();
+      setTotalUsers(result.length); // Supone que el resultado es un array de personas
+    } catch (error) {
+      console.error('Error al obtener el total de usuarios:', error);
+    }
+  };
+
+  // useEffect para cargar el total de usuarios al acceder al dashboard
+  useEffect(() => {
+    console.log('Active operation:', activeOperation);
+    
+    if (activeOperation === 'dashboard') {
+      loadTotalUsers();
+    }
+  }, [activeOperation]); // Solo se ejecuta cuando activeOperation cambia
 
   const handleTypeChange = async (e) => {
     const type = e.target.value;
@@ -22,41 +43,6 @@ export default function App() {
       } catch (error) {
         console.error('Error fetching data:', error);
       }
-    }
-  };
-
-  const handleCreate = (name, age) => {
-    const newUser = { id: usersData.length + 1, name, age: parseInt(age) };
-    setUsersData([...usersData, newUser]);
-    return true;
-  };
-
-  const handleUpdate = (id, age) => {
-    const updatedUsers = usersData.map((user) =>
-      user.id === parseInt(id) ? { ...user, age: parseInt(age) } : user
-    );
-    setUsersData(updatedUsers);
-    return true;
-  };
-
-  const handleDelete = async (cedula) => {
-    console.log('Cedula:', cedula);
-    
-    try {
-      const response = await fetch(`http://localhost:3000/api/borrar/${cedula}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        alert('Persona eliminada exitosamente');
-        return true;
-      } else {
-        alert('No se pudo eliminar la persona. Persona no encontrada.');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error al eliminar persona:', error);
-      return false;
     }
   };
 
@@ -82,8 +68,10 @@ export default function App() {
       </aside>
 
       <main className="flex-1 p-8">
-        {activeOperation === 'dashboard' && <Dashboard usersData={usersData} />}
-        {activeOperation === 'create' && <CreateComponent operation="Create" />}
+        {activeOperation === 'dashboard' && <Dashboard  totalUsers={totalUsers} />}
+
+        {activeOperation === 'create' && <CreateComponent />}
+
         {activeOperation === 'read' && (
           <ReadComponent
             data={usersData}
@@ -91,8 +79,10 @@ export default function App() {
             handleTypeChange={handleTypeChange}
           />
         )}
-        {activeOperation === 'update' && <UpdateComponent operation="Update" />}
-        {activeOperation === 'delete' && <DeleteComponent operation="Delete" handleAction={handleDelete} />}
+
+        {activeOperation === 'update' && <UpdateComponent />}
+        
+        {activeOperation === 'delete' && <DeleteComponent />}
       </main>
     </div>
   );

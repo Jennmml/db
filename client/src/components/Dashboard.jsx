@@ -1,7 +1,4 @@
-const Dashboard = ({ usersData })=>{
-    const totalUsers = usersData.length;
-
-
+const Dashboard = ({totalUsers })=>{
     return (
       <div className="grid gap-4 md:grid-cols-2">
         <div className="bg-white shadow-md p-4 rounded">
