@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import Dashboard from './components/Dashboard';
-import CudComponent from './components/CudComponent';
+import DeleteComponent from './components/DeleteComponent';
 import ReadComponent from './components/ReadComponent';
+import CreateComponent from './components/CreateComponent';
+import UpdateComponent from './components/UpdateComponent';
 
 export default function App() {
   const [activeOperation, setActiveOperation] = useState('dashboard');
@@ -37,10 +39,25 @@ export default function App() {
     return true;
   };
 
-  const handleDelete = (id) => {
-    const filteredUsers = usersData.filter((user) => user.id !== parseInt(id));
-    setUsersData(filteredUsers);
-    return true;
+  const handleDelete = async (cedula) => {
+    console.log('Cedula:', cedula);
+    
+    try {
+      const response = await fetch(`http://localhost:3000/api/borrar/${cedula}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('Persona eliminada exitosamente');
+        return true;
+      } else {
+        alert('No se pudo eliminar la persona. Persona no encontrada.');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error al eliminar persona:', error);
+      return false;
+    }
   };
 
   return (
@@ -66,7 +83,7 @@ export default function App() {
 
       <main className="flex-1 p-8">
         {activeOperation === 'dashboard' && <Dashboard usersData={usersData} />}
-        {activeOperation === 'create' && <CudComponent operation="Create" handleAction={handleCreate} />}
+        {activeOperation === 'create' && <CreateComponent operation="Create" />}
         {activeOperation === 'read' && (
           <ReadComponent
             data={usersData}
@@ -74,8 +91,8 @@ export default function App() {
             handleTypeChange={handleTypeChange}
           />
         )}
-        {activeOperation === 'update' && <CudComponent operation="Update" handleAction={handleUpdate} />}
-        {activeOperation === 'delete' && <CudComponent operation="Delete" handleAction={handleDelete} />}
+        {activeOperation === 'update' && <UpdateComponent operation="Update" />}
+        {activeOperation === 'delete' && <DeleteComponent operation="Delete" handleAction={handleDelete} />}
       </main>
     </div>
   );

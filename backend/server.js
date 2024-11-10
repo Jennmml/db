@@ -92,210 +92,97 @@ app.get('/api/clientes', async (req, res) => {
   })
 
 
-
-
-
-// Endpoint para obtener todos los productos
-app.get('/api/products/', async (req, res) => {
-    try {
-        console.log("Iniciando consulta para obtener los productos de una persona");
-        const result = await pool.request()
-            .query('SELECT * FROM products');
-        console.log("Resultado de la consulta:", result);
-        res.json(result.recordset);
-    } catch (err) {
-        console.error('Error al obtener productos:', err);
-        res.status(500).send('Error al obtener productos');
-    }
-});
-
-
-
-
-//endpoint para obtener las ordenes de un usuario
-app.get('/api/cart/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        console.log("Iniciando consulta para obtener los productos en el carrito de un usuario");
-        const result = await pool.request()
-            .input('user_id', sql.Int, id)
-            .query(`
-                SELECT p.id AS product_id, p.name AS product_name, p.description, p.price, p.stock, p.image_url, 
-                       c.quantity, c.added_date
-                FROM cart c
-                JOIN products p ON c.product_id = p.id
-                WHERE c.user_id = @user_id
-            `);
-        console.log("Resultado de la consulta:", result);
-        res.json(result.recordset);
-    } catch (err) {
-        console.error('Error al obtener productos en el carrito:', err);
-        res.status(500).send('Error al obtener productos en el carrito');
-    }
-});
-
-
-
-// Endpoint para obtener los productos en el carrito de todos los usuarios
-app.get('/api/carts', verifyToken, async (req, res) => {
-    try {
-        console.log("Iniciando consulta para obtener los productos en el carrito de todos los usuarios");
-        const result = await pool.request()
-            .query(`
-                SELECT c.user_id, p.id AS product_id, p.name AS product_name, p.description, p.price, p.stock, p.image_url, 
-                       c.quantity, c.added_date
-                FROM cart c
-                JOIN products p ON c.product_id = p.id;
-            `);
-        console.log("Resultado de la consulta:", result);
-        res.json(result.recordset);
-    } catch (err) {
-        console.error('Error al obtener productos en el carrito:', err);
-        res.status(500).send('Error al obtener productos en el carrito');
-    }
-});
-
-
-app.post('/api/register', async (req, res) => {
-    const { first_name, last_name, email, password, address, number } = req.body;
+//Endpoint para registrar una persona
+  app.post('/api/register', async (req, res) => {
+    const { cedula, nombre, apellido_1, apellido_2, genero, direccion } = req.body;
 
     try {
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-        const result = await pool.request()
-            .input('first_name', sql.VarChar, first_name)
-            .input('last_name', sql.VarChar, last_name)
-            .input('email', sql.VarChar, email)
-            .input('password', sql.VarChar, hashedPassword)
-            .input('address', sql.VarChar, address)
-            .input('phone_number', sql.VarChar, number)
-            .query(`
-                IF NOT EXISTS (SELECT 1 FROM users WHERE email = @email)
-                BEGIN
-                    INSERT INTO users (first_name, last_name, email, password, address, phone_number) 
-                    VALUES (@first_name, @last_name, @email, @password, @address, @phone_number)
-                END
-            `);
-
-        if (result.rowsAffected[0] > 0) {
-            res.status(201).json({ message: 'Usuario registrado exitosamente' });
-        } else {
-            res.status(200).json({ message: 'El usuario ya existe y no se realizó ninguna acción' });
-        }
-    } catch (err) {
-        console.error('Error al registrar usuario:', err);
-        res.status(500).json({ message: 'Error al registrar usuario' });
-    }
-});
-
-app.post('/api/login', async (req, res) => {
-    console.log("Iniciando sesión");
-    const { email, password } = req.body;
-
-    try {
-        const result = await pool.request()
-            .input('email', sql.VarChar, email)
-            .query('SELECT * FROM users WHERE email = @email');
-
-        if (result.recordset.length === 0) {
-            return res.status(401).json({ message: 'Credenciales inválidas' });
-        }
-
-        const user = result.recordset[0];   
-        const match = await bcrypt.compare(password, user.password);
-        if (!match) {
-            return res.status(401).json({ message: 'Credenciales inválidas' });
-        }
-
-        const token = jwt.sign({ id: user.id, email: user.email }, secretKey, { expiresIn: '1h' });
+        // Verifica si todos los campos obligatorios están presentes
+        console.log("Iniciando registro de persona");
         
-        res.json({
-            token,
-            user: {
-                id: user.id,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                email: user.email,
-                address: user.address,
-                phone_number: user.phone_number,
-                user_role: user.user_role
-            }
-        });
-    } catch (err) {
-        console.error('Error al iniciar sesión:', err);
-        res.status(500).json({ message: 'Error al iniciar sesión' });
-    }
-});
+        if (!cedula || !nombre || !apellido_1 || !genero || !direccion) {
+            return res.status(400).json({ message: 'Faltan campos obligatorios' });
+        }
 
-app.delete('/users/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        // 1. Eliminar las reseñas del usuario
-        await pool.request()
-            .input('user_id', sql.Int, parseInt(id))
-            .query('DELETE FROM reviews WHERE user_id = @user_id');
-
-        // 2. Eliminar el carrito asociado al usuario
-        await pool.request()
-            .input('user_id', sql.Int, parseInt(id))
-            .query('DELETE FROM cart WHERE user_id = @user_id');
-
-        // 3. Eliminar las transacciones relacionadas con las órdenes del usuario
-        await pool.request()
-            .input('user_id', sql.Int, parseInt(id))
-            .query('DELETE FROM transactions WHERE order_id IN (SELECT id FROM orders WHERE user_id = @user_id)');
-
-        // 4. Eliminar los detalles de los pedidos relacionados con las órdenes del usuario
-        await pool.request()
-            .input('user_id', sql.Int, parseInt(id))
-            .query('DELETE FROM order_details WHERE order_id IN (SELECT id FROM orders WHERE user_id = @user_id)');
-
-        // 5. Eliminar las órdenes relacionadas con el usuario
-        await pool.request()
-            .input('user_id', sql.Int, parseInt(id))
-            .query('DELETE FROM orders WHERE user_id = @user_id');
-
-        // 6. Finalmente, eliminar el usuario
+        // Llamada al procedimiento almacenado
         const result = await pool.request()
-            .input('id', sql.Int, parseInt(id))
-            .query('DELETE FROM users WHERE id = @id');
+            .input('cedula', sql.VarChar, cedula)
+            .input('nombre', sql.VarChar, nombre)
+            .input('apellido1', sql.VarChar, apellido_1)
+            .input('apellido2', sql.VarChar, apellido_2 || null)  // Maneja `apellido_2` opcional
+            .input('genero', sql.Char, genero)
+            .input('direccion', sql.VarChar, direccion)
+            .execute('InsertarPersona');  // Ejecuta el procedimiento almacenado
 
-        console.log("Resultado de la consulta:", result);
-
+        // Verifica si la inserción fue exitosa
         if (result.rowsAffected[0] > 0) {
-            res.status(200).send('Usuario borrado exitosamente');
+            res.status(201).json({ message: 'Persona registrada exitosamente' });
         } else {
-            res.status(404).send('Usuario no encontrado');
+            res.status(200).json({ message: 'Error al insertar persona' });
         }
     } catch (err) {
-        console.error('Error al borrar usuario:', err);
-        res.status(500).send('Error al borrar usuario');
+        console.error('Error al registrar persona:', err);
+        res.status(500).json({ message: 'Error al registrar persona' });
     }
 });
 
-// Endpoint para actualizar la edad de una persona (PUT)
-app.put('/api/actualizar', verifyToken, async (req, res) => {
-    const { id, age } = req.body;
+
+
+
+app.delete('/api/borrar/:cedula', async (req, res) => {
+    const { cedula } = req.params;
+
+    // Verificar si la cédula es válida
+    if (!cedula || cedula.trim() === '') {
+        return res.status(400).send('Cédula no válida');
+    }
 
     try {
-        console.log("Iniciando consulta para actualizar la edad de la persona");
+        // Ejecutar el procedimiento almacenado para borrar la persona
         const result = await pool.request()
-            .input('id', sql.Int, parseInt(id)) // Convertir id a entero
-            .input('age', sql.Int, parseInt(age)) // Convertir age a entero
-            .query('UPDATE users SET age = @age WHERE id = @id');
-        
-        console.log("Resultado de la consulta:", result);
+            .input('cedula', sql.VarChar, cedula)
+            .execute('BorrarPersona');
 
-        if (result.rowsAffected[0] > 0) {
-            res.status(200).send('Edad de la persona actualizada exitosamente');
+        // Mostrar el resultado en la consola para depuración
+        console.log('Resultado de la operación:', result);
+
+        // Verificar si se afectó al menos una fila
+        const totalRowsAffected = result.rowsAffected.reduce((acc, curr) => acc + curr, 0);
+
+        if (totalRowsAffected > 0) {
+            res.status(200).json({ message: 'Persona eliminada exitosamente' });
         } else {
-            res.status(404).send('Usuario no encontrado');
+            res.status(404).json({ message: 'Persona no encontrada' });
         }
-    } catch (err) {
-        console.error('Error al actualizar la edad de la persona:', err);
-        res.status(500).send('Error al actualizar la edad de la persona');
+    } catch (error) {
+        console.error('Error al borrar persona:', error);
+        res.status(500).json({ message: 'Error al borrar persona', error: error.message });
     }
 });
+
+
+// Endpoint para actualizar la dirección de una persona
+app.put('/api/update/:cedula', async (req, res) => {
+    const { cedula } = req.params;
+    const { nueva_direccion } = req.body;
+
+    try {
+        const result = await pool.request()
+            .input('cedula', sql.VarChar, cedula)
+            .input('nueva_direccion', sql.VarChar, nueva_direccion)
+            .execute('ActualizarDireccion');
+
+        if (result.rowsAffected[0] > 0) {
+            res.status(200).json({ message: 'Dirección actualizada exitosamente' });
+        } else {
+            res.status(404).json({ message: 'Cédula no encontrada' });
+        }
+    } catch (error) {
+        console.error('Error al actualizar dirección:', error);
+        res.status(500).json({ message: 'Error al actualizar dirección', error: error.message });
+    }
+});
+
 
 // Iniciar el servidor
 app.listen(port, () => {
