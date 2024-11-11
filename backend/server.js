@@ -92,6 +92,37 @@ app.get('/api/clientes', async (req, res) => {
   })
 
 
+  app.get('/api/roles', async (req, res) => {
+    try {
+        console.log('Obteniendo roles');
+        const result = await pool.request().query('SELECT * FROM Vista_Empleados_Simplificada');
+        console.log('Roles obtenidos:', result.recordset);
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron roles' });
+        }
+
+        res.status(200).json(result.recordset);
+    } catch (error) {
+        console.error('Error al obtener roles:', error.message);
+        res.status(500).json({ message: 'Error al obtener roles', error: error.message });
+    }
+});
+
+
+
+app.get('/api/contratos', async (req, res) => {
+    try {
+        const result = await pool.request().query('SELECT * FROM Vista_Resumen_Contratos_Empresa');
+        console.log('Direct query result:', result.recordset);
+        res.status(200).json(result.recordset);
+    } catch (error) {
+        console.error('Error with direct query:', error);
+        res.status(500).json({ message: 'Error with direct query', error: error.message });
+    }
+});
+
+
 //Endpoint para registrar una persona
   app.post('/api/register', async (req, res) => {
     const { cedula, nombre, apellido_1, apellido_2, genero, direccion } = req.body;
@@ -143,8 +174,6 @@ app.delete('/api/borrar/:cedula', async (req, res) => {
             .input('cedula', sql.VarChar, cedula)
             .execute('BorrarPersona');
 
-        // Mostrar el resultado en la consola para depuración
-        console.log('Resultado de la operación:', result);
 
         // Verificar si se afectó al menos una fila
         const totalRowsAffected = result.rowsAffected.reduce((acc, curr) => acc + curr, 0);
@@ -182,6 +211,8 @@ app.put('/api/update/:cedula', async (req, res) => {
         res.status(500).json({ message: 'Error al actualizar dirección', error: error.message });
     }
 });
+
+
 
 
 // Iniciar el servidor

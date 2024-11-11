@@ -4,6 +4,7 @@ import DeleteComponent from './components/DeleteComponent';
 import ReadComponent from './components/ReadComponent';
 import CreateComponent from './components/CreateComponent';
 import UpdateComponent from './components/UpdateComponent';
+import EnterpriseDasboard from './components/DashBoardEmpresarial';
 
 export default function App() {
   const [activeOperation, setActiveOperation] = useState('dashboard');
@@ -11,25 +12,21 @@ export default function App() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [selectedType, setSelectedType] = useState('');
 
-  // Función para cargar el total de usuarios
   const loadTotalUsers = async () => {
     try {
       const response = await fetch(`http://localhost:3000/api/personas`);
       const result = await response.json();
-      setTotalUsers(result.length); // Supone que el resultado es un array de personas
+      setTotalUsers(result.length);
     } catch (error) {
       console.error('Error al obtener el total de usuarios:', error);
     }
   };
 
-  // useEffect para cargar el total de usuarios al acceder al dashboard
   useEffect(() => {
-    console.log('Active operation:', activeOperation);
-    
     if (activeOperation === 'dashboard') {
       loadTotalUsers();
     }
-  }, [activeOperation]); // Solo se ejecuta cuando activeOperation cambia
+  }, [activeOperation]);
 
   const handleTypeChange = async (e) => {
     const type = e.target.value;
@@ -47,11 +44,11 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100">
       <aside className="w-64 bg-white shadow-md p-4">
         <h2 className="text-2xl font-bold text-gray-800">CRUD App</h2>
         <nav className="mt-6 space-y-2">
-          {['dashboard', 'create', 'read', 'update', 'delete'].map((operation) => (
+          {['dashboard', 'create', 'read', 'update', 'delete','Enterprise-Dashboard'].map((operation) => (
             <button
               key={operation}
               className={`w-full text-left px-4 py-2 rounded ${
@@ -67,11 +64,9 @@ export default function App() {
         </nav>
       </aside>
 
-      <main className="flex-1 p-8">
-        {activeOperation === 'dashboard' && <Dashboard  totalUsers={totalUsers} />}
-
+      <main className="flex-1 p-8 overflow-y-auto">
+        {activeOperation === 'dashboard' && <Dashboard totalUsers={totalUsers} />}
         {activeOperation === 'create' && <CreateComponent />}
-
         {activeOperation === 'read' && (
           <ReadComponent
             data={usersData}
@@ -79,10 +74,9 @@ export default function App() {
             handleTypeChange={handleTypeChange}
           />
         )}
-
         {activeOperation === 'update' && <UpdateComponent />}
-        
         {activeOperation === 'delete' && <DeleteComponent />}
+        {activeOperation === 'Enterprise-Dashboard' && <EnterpriseDasboard />}
       </main>
     </div>
   );
