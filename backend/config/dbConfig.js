@@ -5,7 +5,7 @@ const config = {
     user: 'jony',  
     password: '123',  
     server: 'JONATHAN//SQLEXPRESS',  
-    database: 'BD',  
+    database: 'master',  
     options: {
         encrypt: false,  
         enableArithAbort: true 

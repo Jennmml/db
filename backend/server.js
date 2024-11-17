@@ -111,6 +111,32 @@ app.get('/api/clientes', async (req, res) => {
 
 
 
+//Vista de resumen de contratos de empresas
+app.get('/api/contratos', async (req, res) => {
+    try {
+        const result = await pool.request().query('SELECT * FROM Vista_Resumen_Contratos_Empresa');
+        res.status(200).json(result.recordset);
+    } catch (error) {
+        console.error('Error with direct query:', error);
+        res.status(500).json({ message: 'Error with direct query', error: error.message });
+    }
+});
+
+
+//Vista de resumen de clientes con contratos activos
+app.get('/api/clientes_activos', async (req, res) => {
+    try {
+        const result = await pool.request().query('SELECT * FROM Vista_Informacion_Contratos_Clientes');
+        console.log('Direct query result:', result.recordset);
+        res.status(200).json(result.recordset);
+    } catch (error) {
+        console.error('Error with direct query:', error);
+        res.status(500).json({ message: 'Error with direct query', error: error.message });
+    }
+});
+
+
+
 app.get('/api/contratos', async (req, res) => {
     try {
         const result = await pool.request().query('SELECT * FROM Vista_Resumen_Contratos_Empresa');
@@ -190,29 +216,48 @@ app.delete('/api/borrar/:cedula', async (req, res) => {
 });
 
 
-// Endpoint para actualizar la dirección de una persona
+
+// Endpoint para actualizar la dirección y/o cambiar el estado de un cliente
 app.put('/api/update/:cedula', async (req, res) => {
     const { cedula } = req.params;
-    const { nueva_direccion } = req.body;
+    const { nueva_direccion, estado } = req.body; // Agregado el estado al body
 
     try {
-        const result = await pool.request()
-            .input('cedula', sql.VarChar, cedula)
-            .input('nueva_direccion', sql.VarChar, nueva_direccion)
-            .execute('ActualizarDireccion');
+        // Verificar si se necesita actualizar la dirección
+        if (nueva_direccion) {
+            const direccionRequest = pool.request()
+                .input('cedula', sql.VarChar, cedula)
+                .input('nueva_direccion', sql.VarChar, nueva_direccion);
 
-        if (result.rowsAffected[0] > 0) {
-            res.status(200).json({ message: 'Dirección actualizada exitosamente' });
-        } else {
-            res.status(404).json({ message: 'Cédula no encontrada' });
+            // Ejecutar el procedimiento almacenado para actualizar la dirección
+            const resultDireccion = await direccionRequest.execute('ActualizarDireccion');
+            console.log("Direccion actualizada");
+        
         }
+
+        // Verificar si se necesita actualizar el estado (ya sea 'Activo' o 'Inactivo')
+        if (estado === 'Inactivo' || estado === 'Activo') {
+            const estadoRequest = pool.request()
+                .input('cedula', sql.VarChar, cedula)
+                .input('estado', sql.VarChar, estado);
+
+            const resultEstado = await estadoRequest.query("UPDATE Clientes SET estado = @estado WHERE cedula = @cedula");
+            console.log("Estado actualizado");
+        }
+
+        res.status(200).json({ message: 'Actualización completada exitosamente' });
     } catch (error) {
-        console.error('Error al actualizar dirección:', error);
-        res.status(500).json({ message: 'Error al actualizar dirección', error: error.message });
+        console.error('Error al actualizar la información:', error);
+        res.status(500).json({ message: 'Error al actualizar la información', error: error.message });
     }
 });
 
 
+
+
+app.get('/', (req, res) => {
+    res.send('¡Hola mundo!');
+});
 
 
 // Iniciar el servidor

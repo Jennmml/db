@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const EnterpriseDasboard = () => {
+const ResumenContrato = () => {
   const [contractsData, setContractsData] = useState([]);
 
   useEffect(() => {
@@ -52,4 +52,4 @@ const EnterpriseDasboard = () => {
   );
 };
 
-export default EnterpriseDasboard;
+export default ResumenContrato;
