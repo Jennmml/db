@@ -34,8 +34,23 @@ export default function App() {
     setSelectedType(type);
 
     if (type) {
+      let endpoint = '';
+      switch (type) {
+        case 'clientes':
+          endpoint = 'clientes';
+          break;
+        case 'colaboradores':
+          endpoint = 'colaboradores';
+          break;
+        case 'agentes':
+          endpoint = 'agentes';
+          break;
+        default:
+          endpoint = 'personas';
+      }
+
       try {
-        const response = await fetch(`http://localhost:3000/api/${type}`);
+        const response = await fetch(`http://localhost:3000/api/${endpoint}`);
         const result = await response.json();
         setUsersData(result);
       } catch (error) {
@@ -44,7 +59,7 @@ export default function App() {
     }
   };
 
-  const operations = ['people-roles', 'create', 'read', 'update', 'delete','contracts','active Clients'];
+  const operations = ['people-roles', 'create', 'read', 'update', 'delete', 'contracts', 'active Clients'];
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className="w-64 bg-white shadow-md p-4">
@@ -78,7 +93,7 @@ export default function App() {
         )}
         {activeOperation === 'update' && <UpdateComponent />}
         {activeOperation === 'delete' && <DeleteComponent />}
-        {activeOperation === 'contracts' && <ResumenContrato/>}
+        {activeOperation === 'contracts' && <ResumenContrato />}
         {activeOperation === 'active Clients' && <ClientesActivos />}
       </main>
     </div>

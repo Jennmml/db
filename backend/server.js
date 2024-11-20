@@ -34,41 +34,44 @@ app.get('/api/personas', async (req, res) => {
 
 
 app.get('/api/clientes', async (req, res) => {
-    try{
-      const result = await pool.request().query('SELECT * FROM Clientes');
-      console.log(result);
-      res.json(result.recordset);
-    }catch(error){
-      console.error('Error al obtener clientes:', error);
-      res.status(500).send('Error al obtener clientes');
+    try {
+        const result = await pool.request().execute('Cursor_ReporteClientes');
+        console.log(result);
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error al obtener clientes:', error);
+        res.status(500).send('Error al obtener clientes');
     }
-  })
+});
 
 
 
-  app.get('/api/colaboradores', async (req, res) => {
-    try{
-      const result = await pool.request().query('SELECT * FROM Colaboradores');
-      console.log(result);
-      res.json(result.recordset);
-    }catch(error){
-      console.error('Error al obtener clientes:', error);
-      res.status(500).send('Error al obtener clientes');
+
+app.get('/api/colaboradores', async (req, res) => {
+    try {
+        const result = await pool.request().execute('Cursor_ReporteColaboradores');
+        console.log(result);
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error al obtener colaboradores:', error);
+        res.status(500).send('Error al obtener colaboradores');
     }
-  })
+});
 
 
 
-  app.get('/api/agentes', async (req, res) => {
-    try{
-      const result = await pool.request().query('SELECT * FROM Agentes');
-      console.log(result);
-      res.json(result.recordset);
-    }catch(error){
-      console.error('Error al obtener clientes:', error);
-      res.status(500).send('Error al obtener clientes');
+
+app.get('/api/agentes', async (req, res) => {
+    try {
+        const result = await pool.request().execute('Cursor_ReporteAgentes');
+        console.log(result);
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error al obtener agentes:', error);
+        res.status(500).send('Error al obtener agentes');
     }
-  })
+});
+
 
 
   app.get('/api/roles', async (req, res) => {
@@ -129,7 +132,7 @@ app.get('/api/contratos', async (req, res) => {
 
 
 //Endpoint para registrar una persona
-  app.post('/api/register', async (req, res) => {
+app.post('/api/register', async (req, res) => {
     const { cedula, nombre, apellido_1, apellido_2, genero, direccion } = req.body;
 
     try {

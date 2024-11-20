@@ -28,8 +28,8 @@ const ReadComponent = ({ data, selectedType, handleTypeChange }) => {
       </select>
 
       <div className="space-y-4">
-        {data.map((item) => (
-          <div key={item.cedula || item.id} className="border-b pb-2">
+        {data.map((item, index) => (
+          <div key={item.cedula || item.id || index} className="border-b pb-2">
             {selectedType === 'personas' && (
               <>
                 <p className="text-gray-600">{item.nombre} {item.apellido1} {item.apellido2}</p>
@@ -41,29 +41,29 @@ const ReadComponent = ({ data, selectedType, handleTypeChange }) => {
 
             {selectedType === 'clientes' && (
               <>
+                <p className="text-gray-600">Cédula: {item.cedula}</p>
+                <p className="text-gray-600">Nombre: {item.nombre} {item.apellido1}</p>
                 <p className="text-gray-600">Empresa Asociada: {item.empresa_asociada}</p>
                 <p className="text-gray-600">Estado: {item.estado}</p>
-                <p className="text-gray-600">Fecha de Registro: {formatDate(item.fecha_de_registro)}</p>
               </>
             )}
 
             {selectedType === 'colaboradores' && (
               <>
+                <p className="text-gray-600">Cédula: {item.cedula}</p>
+                <p className="text-gray-600">Nombre: {item.nombre} {item.apellido1}</p>
                 <p className="text-gray-600">Departamento: {item.departamento}</p>
                 <p className="text-gray-600">Rol de Contrato: {item.rol_contrato}</p>
-                <p className="text-gray-600">Banda: {item.banda}</p>
-                <p className="text-gray-600">Estado: {item.estado}</p>
-                <p className="text-gray-600">Fecha de Incorporación: {formatDate(item.fecha_de_incorporacion)}</p>
               </>
             )}
 
             {selectedType === 'agentes' && (
               <>
+                <p className="text-gray-600">Cédula: {item.cedula}</p>
+                <p className="text-gray-600">Nombre: {item.nombre} {item.apellido1}</p>
                 <p className="text-gray-600">Estado: {item.estado}</p>
                 <p className="text-gray-600">Número de Contratos Asignados: {item.numero_de_contratos_asignados}</p>
                 <p className="text-gray-600">Reuniones Asociadas: {item.reuniones_asociadas}</p>
-                <p className="text-gray-600">Contratos Asociados: {item.contratos_asociados}</p>
-                <p className="text-gray-600">Fecha de Registro: {formatDate(item.fecha_de_registro)}</p>
               </>
             )}
           </div>
