@@ -22,24 +22,7 @@ const initializePool = async () => {
 
 initializePool();
 
-// Middleware para verificar el token JWT
-const verifyToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) {
-        return res.status(403).send('Se requiere un token');
-    }
-
-    jwt.verify(token, secretKey, (err, decoded) => {
-        if (err) {
-            return res.status(401).send('Token no válido');
-        }
-        req.userId = decoded.id; // Guarda el id del usuario en la request
-        next();
-    });
-};
-//Hola
 
 //endpoint para obtener todos los clientes
 app.get('/api/personas', async (req, res) => {
