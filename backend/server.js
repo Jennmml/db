@@ -2,13 +2,9 @@ const express = require('express');
 const { connect } = require('./config/dbConfig');
 const sql = require('mssql');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = 3000;
-const saltRounds = 10; // La cantidad de rondas de encriptación
-const secretKey = 'claveJony'; // Cambia esto a una clave secreta más segura
 
 app.use(express.json()); // Permitir leer datos JSON del body
 app.use(cors());
