@@ -1,13 +1,6 @@
 const sql = require('mssql');
 
-let pool;
-
 const connect = async (config) => {
-  if (pool) {
-    console.log("⚠️ Ya existe una conexión a SQL Server");
-    return pool;
-  }
-
   const finalConfig = {
     user: config.user,
     password: config.password,
@@ -16,16 +9,16 @@ const connect = async (config) => {
     options: {
       encrypt: false,
       trustServerCertificate: true,
-      port: 1433, // o el que estés usando
+      port: 1433,
     },
   };
 
   try {
-    pool = await sql.connect(finalConfig);
-    console.log("✅ Conexión exitosa a SQL Server");
+    const pool = await sql.connect(finalConfig);
+    console.log('✅ Conexión exitosa a SQL Server');
     return pool;
   } catch (err) {
-    console.error("❌ Error en SQL Server:", err.message);
+    console.error('❌ Error en SQL Server:', err.message);
     throw err;
   }
 };

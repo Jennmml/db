@@ -1,46 +1,15 @@
-import { useState } from 'react';
-
-const Conexions = () => {
-    const [form, setForm] = useState({
-      dbType: 'SQL',
-      host: '',
-      username: '',
-      password: '',
-      dbname: '',
-    });
-  
-    const handleChange = (e) => {
-      setForm({ ...form, [e.target.id]: e.target.value });
-    };
-  
-    const handleSubmit = async (e) => {
-      e.preventDefault();
-      try {
-        const response = await fetch('http://localhost:3000/api/conectar', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(form),
-        });
-  
-        const data = await response.json();
-  
-        if (!response.ok) {
-          throw new Error(data.message || 'Error desconocido JAJAJA');
-        }
-  
-        alert(data.message);
-      } catch (err) {
-        alert('❌ Error al conectar: ' + err.message);
-      }
-    };
-
+const Conexions = ({ form, handleChange, handleSubmit, conexionEstablecida }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 px-4">
       <h1 className="text-2xl font-bold mb-6 text-center">
         Gestor de Conexión de la Base de Datos
       </h1>
+
+      {conexionEstablecida && (
+        <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+          ✅ Conexión activa
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-md w-full max-w-md space-y-4">
         <div className="flex flex-col">

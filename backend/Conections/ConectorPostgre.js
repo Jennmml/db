@@ -1,19 +1,12 @@
 const { Client } = require('pg');
 
-let client;
-
 const connect = async (config) => {
-  if (client) {
-    console.log('⚠️ Ya existe una conexión a PostgreSQL');
-    return client;
-  }
-
-  client = new Client({
+  const client = new Client({
     user: config.user,
     host: config.host,
     database: config.database,
     password: config.password,
-    port: 5432, // o el puerto que uses
+    port: 5432,
   });
 
   try {
