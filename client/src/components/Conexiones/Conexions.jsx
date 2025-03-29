@@ -27,7 +27,7 @@ const Conexions = () => {
         const data = await response.json();
   
         if (!response.ok) {
-          throw new Error(data.message || 'Error desconocido');
+          throw new Error(data.message || 'Error desconocido JAJAJA');
         }
   
         alert(data.message);
