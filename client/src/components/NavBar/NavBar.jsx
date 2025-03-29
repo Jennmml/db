@@ -1,30 +1,42 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
-const Navbar = ({ conexionEstablecida, setConexionEstablecida }) =>{
-  const cerrarSesion = async () => {
-    await fetch('http://localhost:3000/api/desconectar', { method: 'POST' });
-    setConexionEstablecida(false);
-  };
+const Navbar = ({ conexionEstablecida, onCerrarSesion }) => {
+  const location = useLocation();
 
   return (
-    <nav className="bg-gray-800 text-white p-4 flex justify-between items-center shadow-md">
-      <div className="flex gap-4">
-        <Link to="/conectar" className="hover:text-blue-300 transition">Conectar</Link>
+    <nav className="bg-gray-900 text-white px-6 py-4 shadow-md flex justify-between items-center">
+      <div className="flex gap-6">
+        <Link
+          to="/conectar"
+          className={`hover:text-blue-400 transition ${
+            location.pathname === '/conectar' ? 'text-blue-400 font-semibold' : ''
+          }`}
+        >
+          Conectar
+        </Link>
+
         {conexionEstablecida && (
-          <Link to="/tablas" className="hover:text-blue-300 transition">Tablas</Link>
+          <Link
+            to="/tablas"
+            className={`hover:text-blue-400 transition ${
+              location.pathname === '/tablas' ? 'text-blue-400 font-semibold' : ''
+            }`}
+          >
+            Tablas
+          </Link>
         )}
       </div>
 
       {conexionEstablecida && (
         <button
-          onClick={cerrarSesion}
-          className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm"
+          onClick={onCerrarSesion}
+          className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md text-sm font-medium shadow transition"
         >
-          Cerrar sesión
+          🔌 Cerrar sesión
         </button>
       )}
     </nav>
   );
-}
+};
 
 export default Navbar;
