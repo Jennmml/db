@@ -18,7 +18,7 @@ const Conexions = ({ form, handleChange, handleSubmit, conexionEstablecida }) =>
           </label>
           <select id="dbType" value={form.dbType} onChange={handleChange} className="p-2 border rounded">
             <option value="Postgre">PostgreSQL</option>
-            <option value="SQL">SQL Server</option>
+            <option value="SqlServer">SQL Server</option>
           </select>
         </div>
 
