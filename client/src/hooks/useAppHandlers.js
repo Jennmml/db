@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 export const useAppHandlers = ({
   API_URL,
@@ -16,10 +16,18 @@ export const useAppHandlers = ({
     dbname: '',
   });
 
+  
+  // 🧠 Mapa de caché en memoria para evitar peticiones repetidas
+  const cache = useRef(new Map());
+
+
+  //Esta función maneja los cambios en los campos del formulario de conexión a la base de datos.
   const handleChange = (e) => {
     setForm({ ...form, [e.target.id]: e.target.value });
   };
 
+
+  //Esta función maneja el envío del formulario de conexión a la base de datos.
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -41,6 +49,8 @@ export const useAppHandlers = ({
     }
   };
 
+
+  //Esta función maneja el cierre de sesión y la desconexión de la base de datos.
   const handleCerrarSesion = async () => {
     try {
       const res = await fetch(`${API_URL}/desconectar`, {
@@ -48,6 +58,9 @@ export const useAppHandlers = ({
       });
       const data = await res.json();
       alert(data.message || '🔌 Conexión cerrada');
+
+      // 🧹 Limpiar caché al cerrar sesión
+      cache.current.clear();
 
       setConexionEstablecida(false);
       setTablas([]);
@@ -59,7 +72,18 @@ export const useAppHandlers = ({
     }
   };
 
+
+  //Esta función obtiene las tablas de la base de datos conectada.
   const fetchTablas = async () => {
+    const cacheKey = 'tablas';
+
+    // ⚡ Si las tablas están en caché, úsalas
+    if (cache.current.has(cacheKey)) {
+      console.log('📦 Usando tablas desde caché');
+      setTablas(cache.current.get(cacheKey));
+      return;
+    }
+
     setTablas([]);
     setTablaSeleccionada(null);
     setDatosTabla([]);
@@ -67,18 +91,37 @@ export const useAppHandlers = ({
       const response = await fetch(`${API_URL}/generar-tablas`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
+
+      cache.current.set(cacheKey, data.tablas); // Guardar en caché
+ 
       setTablas(data.tablas);
     } catch (err) {
       alert('❌ Error al obtener tablas: ' + err.message);
     }
   };
 
+
+  //Esta función maneja el clic en una tabla específica y obtiene sus datos.
   const handleTablaClick = async (nombreTabla) => {
     setTablaSeleccionada(nombreTabla);
+
+    const cacheKey = `tabla-${nombreTabla}`;
+
+    // ⚡ Si los datos de la tabla están en caché, úsalos
+    if (cache.current.has(cacheKey)) {
+      console.log(`📦 Usando datos cacheados para la tabla ${nombreTabla}`);
+      setDatosTabla(cache.current.get(cacheKey));
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/tabla/${nombreTabla}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
+
+      cache.current.set(cacheKey, data.datos); // Guardar en caché
+      console.log(`📦 Usando datos de ${nombreTabla} consultados a la base da datos`);
+      
       setDatosTabla(data.datos);
     } catch (err) {
       alert('❌ Error al obtener datos de la tabla: ' + err.message);
@@ -86,6 +129,8 @@ export const useAppHandlers = ({
     }
   };
 
+
+  //Esta función maneja la eliminación de una fila de datos de la tabla.
   const handleEliminarFila = (filaEliminada) => {
     const llavePrimaria = Object.keys(filaEliminada)[0];
     setDatosTabla((prev) =>
@@ -93,6 +138,8 @@ export const useAppHandlers = ({
     );
   };
 
+
+  //Esta función maneja la actualización de una fila de datos de la tabla.
   const handleActualizarFila = (filaActualizada) => {
     const pk = Object.keys(filaActualizada)[0];
     setDatosTabla((prev) =>
