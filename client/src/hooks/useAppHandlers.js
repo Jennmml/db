@@ -9,7 +9,7 @@ export const useAppHandlers = ({
   setDatosTabla,
 }) => {
   const [form, setForm] = useState({
-    dbType: 'SQL',
+    dbType: 'Postgre',
     host: '',
     username: '',
     password: '',
