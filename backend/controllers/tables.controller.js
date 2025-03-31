@@ -10,7 +10,7 @@ const generarTablas = async (req, res) => {
       message: '❌ No hay conexión activa a la base de datos',
     });
   }
-
+ 
   let query;
   if (dbType === 'SQL') {
     query = `
