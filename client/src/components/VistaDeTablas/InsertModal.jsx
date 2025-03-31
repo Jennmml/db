@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 const InsertModal = ({ nombreTabla, onClose, fetchEstructuraTabla, insertarDatosEnTabla }) => {
   const [estructura, setEstructura] = useState([]);
-  const [form, setForm] = useState({});
+  const [formDeDatos, setFormDeDatos] = useState({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -18,7 +18,7 @@ const InsertModal = ({ nombreTabla, onClose, fetchEstructuraTabla, insertarDatos
             initialForm[col.nombre] = '';
           }
         });
-        setForm(initialForm);
+        setFormDeDatos(initialForm);
       } catch (err) {
         alert('❌ Error al obtener estructura: ' + err.message);
       }
@@ -28,13 +28,13 @@ const InsertModal = ({ nombreTabla, onClose, fetchEstructuraTabla, insertarDatos
   }, [nombreTabla, fetchEstructuraTabla]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setFormDeDatos({ ...formDeDatos, [e.target.name]: e.target.value });
   };
 
   const handleInsertar = async () => {
     setLoading(true);
-    console.log('Insertando datos:', form); // ✅
-    await insertarDatosEnTabla(nombreTabla, form); // ✅
+    console.log('Insertando formDeDatos:', formDeDatos); // ✅
+    await insertarDatosEnTabla(nombreTabla, formDeDatos); // ✅
     setLoading(false);
     onClose();
   };
@@ -47,7 +47,7 @@ const InsertModal = ({ nombreTabla, onClose, fetchEstructuraTabla, insertarDatos
         {estructura.length === 0 ? (
           <p>Cargando estructura...</p>
         ) : (
-          <form className="space-y-3">
+          <formDeDatos className="space-y-3">
             {estructura
               .filter((col) => !col.valorDefecto && col.esPrimaria !== true)
               .map((col) => (
@@ -55,14 +55,14 @@ const InsertModal = ({ nombreTabla, onClose, fetchEstructuraTabla, insertarDatos
                   <label className="block font-medium">{col.nombre}</label>
                   <input
                     name={col.nombre}
-                    value={form[col.nombre] || ''}
+                    value={formDeDatos[col.nombre] || ''}
                     onChange={handleChange}
                     className="w-full border rounded px-2 py-1"
                     type="text"
                   />
                 </div>
               ))}
-          </form>
+          </formDeDatos>
         )}
 
         <div className="flex justify-end mt-4 space-x-2">
