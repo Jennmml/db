@@ -5,7 +5,7 @@ import VistaDeTablas from './components/VistaDeTablas/Tablas';
 import Navbar from './components/NavBar/NavBar';
 import { useAppHandlers } from './hooks/useAppHandlers';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = "http://localhost:3000/api"
 
 export default function App() {
   const [conexionEstablecida, setConexionEstablecida] = useState(false);
