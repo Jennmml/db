@@ -259,6 +259,100 @@ const eliminarDatosDeTabla = async (req, res) => {
 };
 
 
+// 🔧 Función reutilizable para obtener estructura de una tabla
+const obtenerEstructuraDesdeBD = async (nombreTabla, connection, dbType) => {
+  const columnasQuery = dbType === 'Postgre'
+    ? `
+      SELECT 
+        column_name AS nombre,
+        data_type AS tipo,
+        is_nullable = 'YES' AS aceptaNulos,
+        column_default AS valorDefecto
+      FROM information_schema.columns 
+      WHERE table_name = '${nombreTabla}'
+    `
+    : `
+      SELECT 
+        c.name AS nombre,
+        t.name AS tipo,
+        c.is_nullable AS aceptaNulos,
+        dc.definition AS valorDefecto
+      FROM sys.columns c
+      JOIN sys.types t ON c.user_type_id = t.user_type_id
+      LEFT JOIN sys.default_constraints dc ON c.default_object_id = dc.object_id
+      WHERE OBJECT_NAME(c.object_id) = '${nombreTabla}';
+    `;
+
+  const resultado = dbType === 'SQL'
+    ? await connection.request().query(columnasQuery)
+    : await connection.query(columnasQuery);
+
+  return dbType === 'SQL' ? resultado.recordset : resultado.rows;
+};
+
+
+
+const obtenerEstructuraTabla = async (req, res) => {
+  const { nombreTabla } = req.params;
+  const { connection, dbType } = getConnection();
+
+  if (!connection || !nombreTabla) {
+    return res.status(400).json({ success: false, message: '❌ Falta conexión o nombre de la tabla' });
+  }
+
+  try {
+    const columnas = await obtenerEstructuraDesdeBD(nombreTabla, connection, dbType);
+    return res.json({ success: true, columnas });
+  } catch (err) {
+    console.error('❌ Error al obtener estructura:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+const insertarDatosEnTabla = async (req, res) => {
+  const { nombreTabla } = req.params;
+  const datos = req.body;
+  const { connection, dbType } = getConnection();
+
+  if (!connection || !nombreTabla || !datos || typeof datos !== 'object') {
+    return res.status(400).json({ success: false, message: '❌ Solicitud inválida' });
+  }
+
+  try {
+    // ✅ Reutilizando la función utilitaria
+    const columnas = await obtenerEstructuraDesdeBD(nombreTabla, connection, dbType);
+
+    // 🔍 Filtrar columnas insertables
+    const columnasInsertables = columnas.filter((col) => {
+      // Si la columna es genre_id (clave primaria autoincremental), no la incluimos
+      if (col.nombre === 'genre_id' && col.tipo === 'integer' && col.valorDefecto === 'nextval') {
+        return false; // Excluimos genre_id si es autoincremental
+      }
+      const noTieneDefault = col.valorDefecto === null || col.valorDefecto === undefined;
+      const fueProporcionada = Object.keys(datos).includes(col.nombre);
+      return fueProporcionada || noTieneDefault;
+    });
+
+    if (columnasInsertables.length === 0) {
+      return res.status(400).json({ success: false, message: '⚠️ No se proporcionaron columnas válidas para insertar' });
+    }
+
+    const nombres = columnasInsertables.map((col) => dbType === 'SQL' ? `[${col.nombre}]` : `"${col.nombre}"`);
+    const valores = columnasInsertables.map((col) => formatearValor(datos[col.nombre]));
+
+    const query = `INSERT INTO ${dbType === 'SQL' ? `[${nombreTabla}]` : `"${nombreTabla}"`} (${nombres.join(', ')}) VALUES (${valores.join(', ')})`;
+
+    await (dbType === 'SQL'
+      ? connection.request().query(query)
+      : connection.query(query));
+
+    return res.json({ success: true, message: '✅ Inserción realizada con éxito' });
+  } catch (err) {
+    console.error(`❌ Error al insertar dinámicamente en ${nombreTabla}:`, err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 
 
@@ -268,4 +362,6 @@ module.exports = {
   obtenerDatosDeTabla,
   editarDatosDeTabla,
   eliminarDatosDeTabla,
+  obtenerEstructuraTabla,
+  insertarDatosEnTabla,
 };

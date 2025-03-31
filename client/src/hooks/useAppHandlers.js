@@ -149,6 +149,48 @@ export const useAppHandlers = ({
     );
   };
 
+
+
+  // Esta función obtiene la estructura de una tabla específica
+const fetchEstructuraTabla = async (nombreTabla) => {
+  try {
+    const response = await fetch(`${API_URL}/estructura/${nombreTabla}`);
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Error al obtener estructura');
+    }
+
+    return data.columnas;
+  } catch (err) {
+    console.error(`❌ Error al obtener estructura de "${nombreTabla}":`, err.message);
+    throw err; 
+  }
+};
+
+
+const insertarDatosEnTabla = async (nombreTabla) => {
+  try {
+    const res = await fetch(`${API_URL}/insertar/${nombreTabla}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+
+    
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ Datos insertados correctamente');
+    } else {
+      alert('❌ Error al insertar: ' + data.message);
+    }
+  } catch (err) {
+    alert('❌ Error en la inserción: ' + err.message);
+  }
+};
+
+
+
   return {
     form,
     handleChange,
@@ -158,5 +200,7 @@ export const useAppHandlers = ({
     handleTablaClick,
     handleEliminarFila,
     handleActualizarFila,
+    fetchEstructuraTabla,
+    insertarDatosEnTabla,
   };
 };

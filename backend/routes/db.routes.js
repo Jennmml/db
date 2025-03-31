@@ -6,6 +6,8 @@ const {
      obtenerDatosDeTabla,
       editarDatosDeTabla,
     eliminarDatosDeTabla,
+    obtenerEstructuraTabla,
+    insertarDatosEnTabla
      } = require('../controllers/tables.controller');
 
 router.post('/conectar', conectarBaseDatos);
@@ -14,6 +16,8 @@ router.get('/generar-tablas', generarTablas);
 router.get('/tabla/:nombreTabla', obtenerDatosDeTabla);
 router.put('/editar/:nombreTabla', editarDatosDeTabla);
 router.delete('/eliminar/:nombreTabla', eliminarDatosDeTabla);
+router.get('/estructura/:nombreTabla', obtenerEstructuraTabla);
+router.post('/insertar/:nombreTabla', insertarDatosEnTabla);
 
 
 module.exports = router;

@@ -24,6 +24,8 @@ export default function App() {
     handleTablaClick,
     handleEliminarFila,
     handleActualizarFila,
+    fetchEstructuraTabla,
+    insertarDatosEnTabla
   } = useAppHandlers({
     API_URL,
     navigate,
@@ -72,6 +74,8 @@ export default function App() {
                 onClickTabla={handleTablaClick}
                 onEliminarLocalmente={handleEliminarFila}
                 onActualizarLocalmente={handleActualizarFila}
+                fetchEstructuraTabla={fetchEstructuraTabla}
+                insertarDatosEnTabla={insertarDatosEnTabla}
               />
             ) : (
               <Navigate to="/conectar" />

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-  import TablaSelector from './TablaSelector.';
+import TablaSelector from './TablaSelector';
 import TablaDatos from './TablaDatos';
 import ModalConfirmacion from './ModalConfirmacion';
+import InsertModal from './InsertModal';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = "http://localhost:3000/api"; // Cambia esto según tu configuración
 
 const VistaDeTablas = ({
   tablas,
@@ -11,11 +12,14 @@ const VistaDeTablas = ({
   datosTabla,
   onClickTabla,
   onEliminarLocalmente,
-  onActualizarLocalmente, 
+  onActualizarLocalmente,
+  fetchEstructuraTabla,
+  insertarDatosEnTabla,
 }) => {
   const [editandoFila, setEditandoFila] = useState(null);
   const [valoresEditados, setValoresEditados] = useState({});
   const [accion, setAccion] = useState(null);
+  const [tablaParaInsertar, setTablaParaInsertar] = useState(null); // ✅ Controla el modal
 
   const columnas = datosTabla.length > 0 ? Object.keys(datosTabla[0]) : [];
 
@@ -75,14 +79,25 @@ const VistaDeTablas = ({
     }
   };
 
+  const handleAbrirInsertar = (nombreTabla) => {
+    setTablaParaInsertar(nombreTabla);
+  };
+
+  const handleCerrarModal = () => {
+    setTablaParaInsertar(null);
+  };
+
   return (
     <div className="p-4">
+      {/* Selector de tablas con botón de inserción */}
       <TablaSelector
         tablas={tablas}
         tablaSeleccionada={tablaSeleccionada}
         onClickTabla={onClickTabla}
+        onInsertar={handleAbrirInsertar} // ✅ Nuevo prop
       />
 
+      {/* Tabla de datos */}
       {tablaSeleccionada && (
         <>
           {datosTabla.length > 0 ? (
@@ -108,6 +123,7 @@ const VistaDeTablas = ({
         </>
       )}
 
+      {/* Modal de confirmación de eliminación */}
       {accion === 'eliminar' && editandoFila && (
         <ModalConfirmacion
           onConfirmar={confirmarEliminacion}
@@ -115,6 +131,16 @@ const VistaDeTablas = ({
             setEditandoFila(null);
             setAccion(null);
           }}
+        />
+      )}
+
+      {/* Modal para insertar nueva fila */}
+      {tablaParaInsertar && (
+        <InsertModal
+          nombreTabla={tablaParaInsertar}
+          onClose={handleCerrarModal}
+          fetchEstructuraTabla={fetchEstructuraTabla}
+          insertarDatosEnTabla={insertarDatosEnTabla}
         />
       )}
     </div>
