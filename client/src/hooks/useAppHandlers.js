@@ -183,7 +183,7 @@ const insertarDatosEnTabla = async (nombreTabla, datos) => {
     if (data.success) {
       alert('✅ Datos insertados correctamente');
 
-      // ⚠️ Borrar caché para que se refresque
+      // ⚠️ Borrar cache para que se refresque
       const cacheKey = `tabla-${nombreTabla}`;
       cache.current.delete(cacheKey);
 
