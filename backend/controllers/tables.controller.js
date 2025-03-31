@@ -355,6 +355,160 @@ const insertarDatosEnTabla = async (req, res) => {
 };
 
 
+const obtenerPermisosTabla = async (req, res) => {
+  const { nombreTabla } = req.params;
+  const { connection, dbType } = getConnection();
+
+  if (!connection || !nombreTabla) {
+    return res.status(400).json({ 
+      success: false, 
+      message: '❌ Falta conexión o nombre de la tabla',
+      permisos: { read: false, write: false, admin: false },
+      columnPermisos: {}
+    });
+  }
+
+  try {
+    // First, get the current user
+    let currentUserQuery;
+    if (dbType === 'Postgre') {
+      currentUserQuery = 'SELECT current_user as usuario';
+    } else if (dbType === 'SQL') {
+      currentUserQuery = 'SELECT SYSTEM_USER as usuario';
+    }
+    
+    const currentUserResult = await (dbType === 'SQL' 
+      ? connection.request().query(currentUserQuery)
+      : connection.query(currentUserQuery));
+    
+    const currentUser = dbType === 'SQL' 
+      ? currentUserResult.recordset[0].usuario 
+      : currentUserResult.rows[0].usuario;
+
+    // Get table-level permissions
+    let tableQuery;
+    let columnQuery;
+    
+    if (dbType === 'Postgre') {
+      tableQuery = `
+        SELECT 
+          privilege_type as permiso
+        FROM information_schema.role_table_grants 
+        WHERE table_name = '${nombreTabla}'
+        AND grantee = '${currentUser}';
+      `;
+
+      columnQuery = `
+        SELECT 
+          column_name,
+          privilege_type as permiso
+        FROM information_schema.role_column_grants 
+        WHERE table_name = '${nombreTabla}'
+        AND grantee = '${currentUser}';
+      `;
+
+      const [tableResult, columnResult] = await Promise.all([
+        connection.query(tableQuery),
+        connection.query(columnQuery)
+      ]);
+      
+      // Process table permissions
+      const tablePermisos = tableResult.rows.map(p => p.permiso);
+      const permisosSimplificados = {
+        read: tablePermisos.includes('SELECT'),
+        write: tablePermisos.includes('INSERT') || tablePermisos.includes('UPDATE') || tablePermisos.includes('DELETE'),
+        admin: tablePermisos.includes('ALL') || tablePermisos.includes('OWNER')
+      };
+
+      // Process column permissions
+      const columnPermisos = {};
+      columnResult.rows.forEach(row => {
+        if (!columnPermisos[row.column_name]) {
+          columnPermisos[row.column_name] = {
+            read: false,
+            write: false
+          };
+        }
+        if (row.permiso === 'SELECT') {
+          columnPermisos[row.column_name].read = true;
+        }
+        if (['INSERT', 'UPDATE'].includes(row.permiso)) {
+          columnPermisos[row.column_name].write = true;
+        }
+      });
+
+      return res.json({ 
+        success: true, 
+        permisos: permisosSimplificados,
+        columnPermisos
+      });
+    } else if (dbType === 'SQL') {
+      tableQuery = `
+        SELECT 
+          permission_name as permiso
+        FROM sys.database_permissions dp
+        JOIN sys.database_principals dp1 ON dp.grantee_principal_id = dp1.principal_id
+        WHERE OBJECT_NAME(major_id) = '${nombreTabla}'
+        AND USER_NAME(grantee_principal_id) = '${currentUser}';
+      `;
+
+      columnQuery = `
+        SELECT 
+          c.name as column_name,
+          dp.permission_name as permiso
+        FROM sys.database_permissions dp
+        JOIN sys.database_principals dp1 ON dp.grantee_principal_id = dp1.principal_id
+        JOIN sys.columns c ON dp.major_id = c.object_id AND dp.minor_id = c.column_id
+        WHERE OBJECT_NAME(dp.major_id) = '${nombreTabla}'
+        AND USER_NAME(dp.grantee_principal_id) = '${currentUser}';
+      `;
+      
+      const [tableResult, columnResult] = await Promise.all([
+        connection.request().query(tableQuery),
+        connection.request().query(columnQuery)
+      ]);
+      
+      // Process table permissions
+      const tablePermisos = tableResult.recordset.map(p => p.permiso);
+      const permisosSimplificados = {
+        read: tablePermisos.includes('SELECT'),
+        write: tablePermisos.includes('INSERT') || tablePermisos.includes('UPDATE') || tablePermisos.includes('DELETE'),
+        admin: tablePermisos.includes('CONTROL') || tablePermisos.includes('ALTER')
+      };
+
+      // Process column permissions
+      const columnPermisos = {};
+      columnResult.recordset.forEach(row => {
+        if (!columnPermisos[row.column_name]) {
+          columnPermisos[row.column_name] = {
+            read: false,
+            write: false
+          };
+        }
+        if (row.permiso === 'SELECT') {
+          columnPermisos[row.column_name].read = true;
+        }
+        if (['INSERT', 'UPDATE'].includes(row.permiso)) {
+          columnPermisos[row.column_name].write = true;
+        }
+      });
+
+      return res.json({ 
+        success: true, 
+        permisos: permisosSimplificados,
+        columnPermisos
+      });
+    }
+  } catch (err) {
+    console.error('❌ Error al obtener permisos:', err.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: err.message,
+      permisos: { read: false, write: false, admin: false },
+      columnPermisos: {}
+    });
+  }
+};
 
 
 module.exports = {
@@ -364,4 +518,5 @@ module.exports = {
   eliminarDatosDeTabla,
   obtenerEstructuraTabla,
   insertarDatosEnTabla,
+  obtenerPermisosTabla,
 };

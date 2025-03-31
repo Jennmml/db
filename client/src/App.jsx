@@ -7,6 +7,7 @@ import TablaSelector from './components/VistaDeTablas/TablaSelector';
 import TablaDatos from './components/VistaDeTablas/TablaDatos';
 import InsertModal from './components/VistaDeTablas/InsertModal';
 import ModalConfirmacion from './components/VistaDeTablas/ModalConfirmacion';
+import PermisosTabla from './components/VistaDeTablas/PermisosTabla';
 import { useAppHandlers } from './hooks/useAppHandlers';
 
 const API_URL = "http://localhost:3000/api";
@@ -16,6 +17,8 @@ export default function App() {
   const [tablas, setTablas] = useState([]);
   const [tablaSeleccionada, setTablaSeleccionada] = useState(null);
   const [datosTabla, setDatosTabla] = useState([]);
+  const [permisosTabla, setPermisosTabla] = useState(null);
+  const [columnPermisos, setColumnPermisos] = useState({});
 
   const [editandoFila, setEditandoFila] = useState(null);
   const [valoresEditados, setValoresEditados] = useState({});
@@ -49,6 +52,26 @@ export default function App() {
       fetchTablas();
     }
   }, [conexionEstablecida]);
+
+  const fetchPermisosTabla = async (nombreTabla) => {
+    try {
+      const response = await fetch(`${API_URL}/permisos/${nombreTabla}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      setPermisosTabla(data.permisos);
+      setColumnPermisos(data.columnPermisos || {});
+    } catch (err) {
+      console.error('Error al obtener permisos:', err);
+      setPermisosTabla(null);
+      setColumnPermisos({});
+    }
+  };
+
+  const handleTablaSeleccionada = async (nombreTabla) => {
+    setTablaSeleccionada(nombreTabla);
+    await handleTablaClick(nombreTabla);
+    await fetchPermisosTabla(nombreTabla);
+  };
 
   const iniciarEdicion = (fila) => {
     setEditandoFila(fila);
@@ -141,29 +164,36 @@ export default function App() {
                 <TablaSelector
                   tablas={tablas}
                   tablaSeleccionada={tablaSeleccionada}
-                  onClickTabla={setTablaSeleccionada && handleTablaClick}
+                  onClickTabla={handleTablaSeleccionada}
                   onInsertar={setTablaAInsertar}
                 />
 
-                {tablaSeleccionada && datosTabla.length > 0 ? (
-                  <TablaDatos
-                    columnas={Object.keys(datosTabla[0])}
-                    datos={datosTabla}
-                    editandoFila={editandoFila}
-                    valoresEditados={valoresEditados}
-                    setValoresEditados={setValoresEditados}
-                    onEditar={iniciarEdicion}
-                    onCancelar={cancelarEdicion}
-                    onGuardar={confirmarEdicion}
-                    onEliminar={(fila) => {
-                      setEditandoFila(fila);
-                      setAccion('eliminar');
-                    }}
-                  />
-                ) : (
-                  <p className="text-center mt-6 text-gray-500">
-                    No hay datos en esta tabla.
-                  </p>
+                {tablaSeleccionada && (
+                  <>
+                    <PermisosTabla permisos={permisosTabla} />
+                    
+                    {datosTabla.length > 0 ? (
+                      <TablaDatos
+                        columnas={Object.keys(datosTabla[0])}
+                        datos={datosTabla}
+                        editandoFila={editandoFila}
+                        valoresEditados={valoresEditados}
+                        setValoresEditados={setValoresEditados}
+                        onEditar={iniciarEdicion}
+                        onCancelar={cancelarEdicion}
+                        onGuardar={confirmarEdicion}
+                        onEliminar={(fila) => {
+                          setEditandoFila(fila);
+                          setAccion('eliminar');
+                        }}
+                        columnPermisos={columnPermisos}
+                      />
+                    ) : (
+                      <p className="text-center mt-6 text-gray-500">
+                        No hay datos en esta tabla.
+                      </p>
+                    )}
+                  </>
                 )}
 
                 {accion === 'eliminar' && editandoFila && (
