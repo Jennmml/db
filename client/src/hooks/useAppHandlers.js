@@ -149,10 +149,12 @@ export const useAppHandlers = ({
     );
   };
 
+  
+
 
 
   // Esta función obtiene la estructura de una tabla específica
-const fetchEstructuraTabla = async (nombreTabla) => {
+  const fetchEstructuraTabla = async (nombreTabla) => {
   try {
     const response = await fetch(`${API_URL}/estructura/${nombreTabla}`);
     const data = await response.json();
@@ -169,18 +171,24 @@ const fetchEstructuraTabla = async (nombreTabla) => {
 };
 
 
-const insertarDatosEnTabla = async (nombreTabla) => {
+const insertarDatosEnTabla = async (nombreTabla, datos) => {
   try {
     const res = await fetch(`${API_URL}/insertar/${nombreTabla}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify(datos),
     });
 
-    
     const data = await res.json();
     if (data.success) {
       alert('✅ Datos insertados correctamente');
+
+      // ⚠️ Borrar caché para que se refresque
+      const cacheKey = `tabla-${nombreTabla}`;
+      cache.current.delete(cacheKey);
+
+      // 🔁 Refrescar datos
+      await handleTablaClick(nombreTabla);
     } else {
       alert('❌ Error al insertar: ' + data.message);
     }
@@ -188,6 +196,7 @@ const insertarDatosEnTabla = async (nombreTabla) => {
     alert('❌ Error en la inserción: ' + err.message);
   }
 };
+
 
 
 
