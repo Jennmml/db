@@ -12,6 +12,7 @@ const cors = require('cors');
 
 //Esto es para poder usar las rutas que se definieron en db.routes
 const dbRoutes = require('./routes/db.routes');
+const tablesRoutes = require('./routes/tables.routes');
 
 //Creando una instancia de el framework Express
 const app = express();
@@ -32,6 +33,7 @@ Se accederia como http://localhost:3000/pera/generar-tablas
 Es una mala practica no hacerlo
 */
 app.use('/api', dbRoutes);
+app.use('/api', tablesRoutes);
 
 //Pagina principal (http://localhost:3000)
 app.get('/', (req, res) => {

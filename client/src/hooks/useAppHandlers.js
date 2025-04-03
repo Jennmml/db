@@ -171,30 +171,16 @@ export const useAppHandlers = ({
 };
 
 
-const insertarDatosEnTabla = async (nombreTabla, datos) => {
-  try {
-    const res = await fetch(`${API_URL}/insertar/${nombreTabla}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(datos),
-    });
+const insertarDatosEnTabla = async (nombreTabla, datos, preview = false, prefix = null, schema = null) => {
+  const url = `${API_URL}/insertar/${nombreTabla}${preview ? '?preview=true' : ''}${prefix ? `&prefix=${encodeURIComponent(prefix)}&schema=${encodeURIComponent(schema)}` : ''}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos),
+  });
 
-    const data = await res.json();
-    if (data.success) {
-      alert('✅ Datos insertados correctamente');
-
-      // ⚠️ Borrar cache para que se refresque
-      const cacheKey = `tabla-${nombreTabla}`;
-      cache.current.delete(cacheKey);
-
-      // 🔁 Refrescar datos
-      await handleTablaClick(nombreTabla);
-    } else {
-      alert('❌ Error al insertar: ' + data.message);
-    }
-  } catch (err) {
-    alert('❌ Error en la inserción: ' + err.message);
-  }
+  if (!res.ok) throw new Error('Error al insertar');
+  return await res.json();
 };
 
 

@@ -9,6 +9,7 @@ import InsertModal from './components/VistaDeTablas/InsertModal';
 import ModalConfirmacion from './components/VistaDeTablas/ModalConfirmacion';
 import PermisosTabla from './components/VistaDeTablas/PermisosTabla';
 import { useAppHandlers } from './hooks/useAppHandlers';
+import StoredProcedureDialog from './components/VistaDeTablas/StoredProcedureDialog';
 
 const API_URL = "http://localhost:3000/api";
 
@@ -19,11 +20,19 @@ export default function App() {
   const [datosTabla, setDatosTabla] = useState([]);
   const [permisosTabla, setPermisosTabla] = useState(null);
   const [columnPermisos, setColumnPermisos] = useState({});
+  const [previewQuery, setPreviewQuery] = useState('');
 
   const [editandoFila, setEditandoFila] = useState(null);
   const [valoresEditados, setValoresEditados] = useState({});
   const [accion, setAccion] = useState(null);
   const [tablaAInsertar, setTablaAInsertar] = useState(null);
+  const [modo, setModo] = useState('execute');
+
+  const [showProcedureDialog, setShowProcedureDialog] = useState(false);
+  const [pendingOperation, setPendingOperation] = useState(null);
+  const [pendingData, setPendingData] = useState(null);
+
+  const [tableProcedures, setTableProcedures] = useState({});
 
   const navigate = useNavigate();
 
@@ -68,9 +77,37 @@ export default function App() {
   };
 
   const handleTablaSeleccionada = async (nombreTabla) => {
-    setTablaSeleccionada(nombreTabla);
-    await handleTablaClick(nombreTabla);
-    await fetchPermisosTabla(nombreTabla);
+    try {
+      setTablaSeleccionada(nombreTabla);
+      const response = await fetch(`${API_URL}/tablas/${nombreTabla}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        // Ordenar los datos por la primera columna (asumiendo que es la clave primaria)
+        const sortedData = data.datos.sort((a, b) => {
+          const firstColumn = Object.keys(a)[0];
+          const valueA = a[firstColumn];
+          const valueB = b[firstColumn];
+          
+          // Si son números, ordenar numéricamente
+          if (!isNaN(valueA) && !isNaN(valueB)) {
+            return Number(valueA) - Number(valueB);
+          }
+          // Si son strings, ordenar alfabéticamente
+          return String(valueA).localeCompare(String(valueB));
+        });
+        
+        setDatosTabla(sortedData);
+      } else {
+        console.error('Error al obtener datos:', data.message);
+        setDatosTabla([]);
+      }
+      
+      await fetchPermisosTabla(nombreTabla);
+    } catch (err) {
+      console.error('Error al obtener datos:', err);
+      setDatosTabla([]);
+    }
   };
 
   const iniciarEdicion = (fila) => {
@@ -83,55 +120,201 @@ export default function App() {
     setValoresEditados({});
   };
 
-  const confirmarEdicion = async () => {
+  const handleInsert = async (datos) => {
     try {
-      const url = `${API_URL}/editar/${tablaSeleccionada}`;
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(valoresEditados),
-      });
+      setPendingData({ nombreTabla: tablaSeleccionada, datos });
+      setPendingOperation('insert');
+      
+      // Check if we already have a stored procedure for this table
+      if (tableProcedures[tablaSeleccionada]) {
+        // Use existing procedure
+        await handleProcedureConfirm(
+          tableProcedures[tablaSeleccionada].prefix,
+          tableProcedures[tablaSeleccionada].schema,
+          'INSERT'
+        );
+      } else {
+        // Show dialog only for first time
+        setShowProcedureDialog(true);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error.message);
+    }
+  };
 
-      if (!res.ok) throw new Error('Error al editar');
-      alert('✅ Editado correctamente.');
+  const handleProcedureConfirm = async (prefix, schema, operationType) => {
+    try {
+      // Store the procedure info for this table
+      setTableProcedures(prev => ({
+        ...prev,
+        [pendingData?.nombreTabla || tablaSeleccionada]: {
+          prefix,
+          schema,
+          operationType
+        }
+      }));
 
-      if (handleActualizarFila) {
-        handleActualizarFila(valoresEditados);
+      let url;
+      let method;
+      let body;
+
+      // Construir la URL base
+      const baseUrl = `${API_URL}`;
+      // Construir los query params
+      const queryParams = new URLSearchParams();
+      if (modo === 'preview') {
+        queryParams.append('preview', 'true');
+      }
+      if (prefix) {
+        queryParams.append('prefix', prefix);
+        queryParams.append('schema', schema);
+        queryParams.append('operationType', operationType);
       }
 
-      cancelarEdicion();
-    } catch (err) {
-      console.error(err);
-      alert('❌ Hubo un problema al editar.');
+      switch (pendingOperation) {
+        case 'edit':
+          url = `${baseUrl}/editar/${tablaSeleccionada}`;
+          method = 'PUT';
+          body = valoresEditados;
+          break;
+        case 'delete':
+          url = `${baseUrl}/eliminar/${tablaSeleccionada}`;
+          method = 'DELETE';
+          body = editandoFila;
+          break;
+        case 'insert':
+          url = `${baseUrl}/insertar/${pendingData.nombreTabla}`;
+          method = 'POST';
+          body = pendingData.datos;
+          break;
+      }
+
+      // Añadir query params a la URL si existen
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url = `${url}?${queryString}`;
+      }
+
+      console.log('🔄 Enviando solicitud:', { url, method, body });
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Error en la operación');
+      }
+      
+      const data = await res.json();
+      console.log('📦 Respuesta recibida:', data);
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Error en la operación');
+      }
+
+      // Limpiar el estado del diálogo
+      setShowProcedureDialog(false);
+      setPendingOperation(null);
+      setPendingData(null);
+      
+      if (modo === 'preview') {
+        // En modo preview, solo mostrar la query y limpiar estados de edición
+        let queryMessage = '';
+        if (pendingOperation === 'delete') {
+          // Solo mostrar la query de eliminación principal
+          queryMessage = data.queries.deleteQuery;
+        } else {
+          queryMessage = data.query;
+        }
+        setPreviewQuery(queryMessage);
+        
+        // Limpiar estados de edición en preview mode también
+        cancelarEdicion();
+        setAccion(null);
+      } else {
+        // En modo execute, refrescar los datos y mostrar confirmación
+        const targetTable = pendingOperation === 'insert' ? pendingData.nombreTabla : tablaSeleccionada;
+        
+        // Limpiar estados de edición
+        cancelarEdicion();
+        setAccion(null);
+
+        // Refrescar datos inmediatamente
+        await handleTablaSeleccionada(targetTable);
+        
+        // Mostrar confirmación después del refresco
+        alert('✅ Operación realizada con éxito');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error.message);
     }
+  };
+
+  const handleEdit = async (valoresEditados) => {
+    try {
+      setValoresEditados(valoresEditados);
+      setPendingOperation('edit');
+      
+      // Check if we already have a stored procedure for this table
+      if (tableProcedures[tablaSeleccionada]) {
+        // Use existing procedure
+        await handleProcedureConfirm(
+          tableProcedures[tablaSeleccionada].prefix,
+          tableProcedures[tablaSeleccionada].schema,
+          'UPDATE'
+        );
+      } else {
+        // Show dialog only for first time
+        setShowProcedureDialog(true);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error.message);
+    }
+  };
+
+  const handleDelete = async (fila) => {
+    try {
+      setEditandoFila(fila);
+      setPendingOperation('delete');
+      
+      // Check if we already have a stored procedure for this table
+      if (tableProcedures[tablaSeleccionada]) {
+        // Use existing procedure
+        await handleProcedureConfirm(
+          tableProcedures[tablaSeleccionada].prefix,
+          tableProcedures[tablaSeleccionada].schema,
+          'DELETE'
+        );
+      } else {
+        // Show dialog only for first time
+        setShowProcedureDialog(true);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error.message);
+    }
+  };
+
+  const confirmarEdicion = async () => {
+    setPendingOperation('edit');
+    setShowProcedureDialog(true);
   };
 
   const confirmarEliminacion = async () => {
-    try {
-      const url = `${API_URL}/eliminar/${tablaSeleccionada}`;
-      const res = await fetch(url, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editandoFila),
-      });
-
-      if (!res.ok) throw new Error('Error al eliminar');
-      alert('🗑️ Eliminado correctamente.');
-      if (handleEliminarFila) {
-        handleEliminarFila(editandoFila);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('❌ Hubo un problema al eliminar.');
-    } finally {
-      cancelarEdicion();
-      setAccion(null);
-    }
+    setPendingOperation('delete');
+    setShowProcedureDialog(true);
   };
 
   const handleInsertarConRefresco = async (nombreTabla, datos) => {
-    await insertarDatosEnTabla(nombreTabla, datos);
-    await handleTablaClick(nombreTabla); // refrescar
+    setPendingOperation('insert');
+    setPendingData({ nombreTabla, datos });
+    setShowProcedureDialog(true);
   };
 
   return (
@@ -184,9 +367,14 @@ export default function App() {
                         onGuardar={confirmarEdicion}
                         onEliminar={(fila) => {
                           setEditandoFila(fila);
-                          setAccion('eliminar');
+                          setPendingOperation('delete');
+                          setShowProcedureDialog(true);
                         }}
                         columnPermisos={columnPermisos}
+                        modo={modo}
+                        setModo={setModo}
+                        previewQuery={previewQuery}
+                        setPreviewQuery={setPreviewQuery}
                       />
                     ) : (
                       <p className="text-center mt-6 text-gray-500">
@@ -194,16 +382,6 @@ export default function App() {
                       </p>
                     )}
                   </>
-                )}
-
-                {accion === 'eliminar' && editandoFila && (
-                  <ModalConfirmacion
-                    onConfirmar={confirmarEliminacion}
-                    onCancelar={() => {
-                      setEditandoFila(null);
-                      setAccion(null);
-                    }}
-                  />
                 )}
 
                 {tablaAInsertar && (
@@ -221,6 +399,24 @@ export default function App() {
           }
         />
       </Routes>
+
+      <StoredProcedureDialog
+        isOpen={showProcedureDialog}
+        onClose={() => {
+          setShowProcedureDialog(false);
+          setPendingOperation(null);
+          setPendingData(null);
+          setPreviewQuery('');
+        }}
+        onConfirm={handleProcedureConfirm}
+        title={
+          pendingOperation === 'edit' ? 'Crear procedimiento almacenado para edición' :
+          pendingOperation === 'delete' ? 'Crear procedimientos almacenados para eliminación' :
+          'Crear procedimiento almacenado para inserción'
+        }
+        operationType={pendingOperation?.toUpperCase()}
+        API_URL={API_URL}
+      />
     </>
   );
 }
