@@ -18,11 +18,13 @@ const StoredProcedureDialog = ({ isOpen, onClose, onConfirm, title, operationTyp
     try {
       setLoading(true);
       setError('');
+      console.log('Fetching schemas from:', `${API_URL}/schemas`);
       const response = await fetch(`${API_URL}/schemas`);
       if (!response.ok) {
         throw new Error('Error al obtener los esquemas');
       }
       const data = await response.json();
+      console.log('Raw schema data:', data);
       
       if (!data.success) {
         throw new Error(data.message || 'Error al obtener los esquemas');
@@ -32,18 +34,16 @@ const StoredProcedureDialog = ({ isOpen, onClose, onConfirm, title, operationTyp
         throw new Error('No se encontraron esquemas disponibles');
       }
 
-      setSchemas(data.schemas);
+      console.log('Available schemas:', data.schemas);
+      // Map the schemas to get just the schema names
+      const schemaList = data.schemas.map(s => s.schema_name);
+      console.log('Processed schema list:', schemaList);
+      setSchemas(schemaList);
       
-      // Set default schema based on database type
-      const defaultSchema = data.schemas.find(s => 
-        s.schema_name === 'dbo' || s.schema_name === 'public'
-      );
-      
-      if (defaultSchema) {
-        setSelectedSchema(defaultSchema.schema_name);
-      } else {
-        setSelectedSchema(data.schemas[0].schema_name);
-      }
+      // Set public as default schema, or dbo for SQL Server
+      const defaultSchema = schemaList.find(s => s === 'public') || schemaList.find(s => s === 'dbo') || schemaList[0];
+      console.log('Selected default schema:', defaultSchema);
+      setSelectedSchema(defaultSchema);
     } catch (error) {
       console.error('Error fetching schemas:', error);
       setError(error.message);
@@ -101,8 +101,8 @@ const StoredProcedureDialog = ({ isOpen, onClose, onConfirm, title, operationTyp
                 <option>No hay esquemas disponibles</option>
               ) : (
                 schemas.map((schema) => (
-                  <option key={schema.schema_name} value={schema.schema_name}>
-                    {schema.schema_name}
+                  <option key={schema} value={schema}>
+                    {schema}
                   </option>
                 ))
               )}

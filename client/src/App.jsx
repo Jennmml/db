@@ -145,16 +145,6 @@ export default function App() {
 
   const handleProcedureConfirm = async (prefix, schema, operationType) => {
     try {
-      // Store the procedure info for this table
-      setTableProcedures(prev => ({
-        ...prev,
-        [pendingData?.nombreTabla || tablaSeleccionada]: {
-          prefix,
-          schema,
-          operationType
-        }
-      }));
-
       let url;
       let method;
       let body;
@@ -165,11 +155,23 @@ export default function App() {
       const queryParams = new URLSearchParams();
       if (modo === 'preview') {
         queryParams.append('preview', 'true');
-      }
-      if (prefix) {
-        queryParams.append('prefix', prefix);
-        queryParams.append('schema', schema);
-        queryParams.append('operationType', operationType);
+      } else {
+        // Only store procedures in execute mode
+        setTableProcedures(prev => ({
+          ...prev,
+          [pendingData?.nombreTabla || tablaSeleccionada]: {
+            prefix,
+            schema,
+            operationType
+          }
+        }));
+
+        // Only add procedure params in execute mode
+        if (prefix) {
+          queryParams.append('prefix', prefix);
+          queryParams.append('schema', schema);
+          queryParams.append('operationType', operationType);
+        }
       }
 
       switch (pendingOperation) {
@@ -222,15 +224,40 @@ export default function App() {
       setPendingData(null);
       
       if (modo === 'preview') {
-        // En modo preview, solo mostrar la query y limpiar estados de edición
-        let queryMessage = '';
+        // En modo preview, mostrar la creación del stored procedure y cómo ejecutarlo
+        let procedureCreation = '';
+        let procedureExecution = '';
+        
+        // Convert operation type for procedure name
+        const procName = pendingOperation === 'edit' ? 'update' : operationType.toLowerCase();
+        
         if (pendingOperation === 'delete') {
-          // Solo mostrar la query de eliminación principal
-          queryMessage = data.queries.deleteQuery;
+          procedureCreation = `-- Correr esta parte antes de llamar el metodo
+CREATE OR REPLACE PROCEDURE ${schema}.${prefix}_${procName}()
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+  ${data.queries.deleteQuery};
+END;
+$BODY$;`;
+
+          procedureExecution = `-- Para ejecutar el procedimiento:
+CALL ${schema}.${prefix}_${procName}();`;
         } else {
-          queryMessage = data.query;
+          procedureCreation = `-- Correr esta parte antes de llamar el metodo
+CREATE OR REPLACE PROCEDURE ${schema}.${prefix}_${procName}()
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+  ${data.query};
+END;
+$BODY$;`;
+
+          procedureExecution = `-- Para ejecutar el procedimiento:
+CALL ${schema}.${prefix}_${procName}();`;
         }
-        setPreviewQuery(queryMessage);
+
+        setPreviewQuery(procedureCreation + '\n\n' + procedureExecution);
         
         // Limpiar estados de edición en preview mode también
         cancelarEdicion();
