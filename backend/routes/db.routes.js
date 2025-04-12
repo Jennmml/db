@@ -16,8 +16,9 @@ const {
     editarDatosDeTabla,
     eliminarDatosDeTabla,
     obtenerEstructuraTabla,
-    insertarDatosEnTabla
-    } = require('../controllers/tables.controller');
+    insertarDatosEnTabla,
+    obtenerPermisosTabla,
+} = require('../controllers/tables.controller');
 
 //Se definen las rutas
 router.post('/conectar', conectarBaseDatos);
@@ -28,5 +29,6 @@ router.put('/editar/:nombreTabla', editarDatosDeTabla);
 router.delete('/eliminar/:nombreTabla', eliminarDatosDeTabla);
 router.get('/estructura/:nombreTabla', obtenerEstructuraTabla);
 router.post('/insertar/:nombreTabla', insertarDatosEnTabla);
+router.get('/permisos/:nombreTabla', obtenerPermisosTabla);
 
 module.exports = router;
